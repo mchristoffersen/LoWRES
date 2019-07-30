@@ -1,0 +1,4 @@
+sudo /usr/local/bin/niusrprio_pcie stop 
+sudo /usr/local/bin/updateNIDrivers --no-prompt 
+sudo /usr/local/bin/niusrprio_pcie start
+
