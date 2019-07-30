@@ -1,5 +1,5 @@
-# LoWRaS
-Control code for the Long Wavelength Radar Sounder (LoWRaS) - C++ for an Ettus X310
+# LoWRES
+Control code for the Long Wavelength Radio Echo Sounder (LoWRES) - C++ for an Ettus X310
 
 Important notes:
 - Developed on Ubuntu 18.04 with all of the UHD requirements intalled via the apt package manager (libuhd-dev libuhd003 uhd-host)
