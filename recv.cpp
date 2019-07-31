@@ -2,6 +2,7 @@
 #include <cstdio>
 #include <iostream>
 #include "recv.h"
+#include "util.h"
 #include "signal.h"
 
 /***********************************************************************
@@ -20,6 +21,7 @@ void recv_to_file(uhd::usrp::multi_usrp::sptr usrp,
 {
 
     int num_total_samps = 0;
+    std::string nmea;
 
     // create a receive streamer
     uhd::stream_args_t stream_args(cpu_format, wire_format);
@@ -90,12 +92,16 @@ void recv_to_file(uhd::usrp::multi_usrp::sptr usrp,
                 acmltr[i] += buff_ptrs[0][i].real()/stack;
             }
             st ++;
+
+            if(st == floor(stack/2)) {
+                // Get location from middle of stack
+                nmea = usrp->get_mboard_sensor("gps_gpgga").value;
+            }
         }
         if(st == stack) {
-            //std::cout << usrp->get_mboard_sensor("gps_gpgga").value << std::endl;
+            saveTrace(dataFile, &acmltr.front(), nmea, md.time_spec, spt);
 
-
-            fwrite((const char*)&acmltr.front(), sizeof(float), spt, dataFile);
+            //fwrite((const char*)&acmltr.front(), sizeof(float), spt, dataFile);
                 //fwrite((const char*)&acmltr.front(), sizeof(float), spt, stdout);
      
             st = 0;

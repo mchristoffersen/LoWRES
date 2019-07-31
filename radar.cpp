@@ -272,8 +272,12 @@ int UHD_SAFE_MAIN(int argc, char* argv[])
     //boost::this_thread::sleep_for(boost::chrono::seconds(1));
 
     // Open data file and write header
-    dataFile = fopen(generate_out_filename(begin).c_str(), "wb");
-    saveHdr(dataFile, chbw, chcf, chlen, champ, chprf, trlen, rx_rate, stack);
+    char filename[38];
+    strcpy(filename, "/home/vervet/data/");
+    generate_out_filename(filename+18, begin);
+    std::cout << filename << std::endl;
+    dataFile = fopen(filename, "wb");
+    saveHdr(dataFile, chbw, chcf, chlen, champ, chprf, trlen, rx_rate, stack, begin);
 
     // start transmit worker thread
     boost::thread_group transmit_thread;
