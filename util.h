@@ -11,7 +11,7 @@ struct gpsData {
 
 gpsData parseNMEA(std::string nmea);
 
-int saveTrace(FILE* dataFile, 
+gpsData saveTrace(FILE* dataFile, 
     float *data, std::string nmea, uhd::time_spec_t time, int traceLen);
 
 void generate_out_filename(

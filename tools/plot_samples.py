@@ -1,7 +1,7 @@
 import struct
 import matplotlib.pyplot as plt
 
-fname = "./usrp_samples.dat"
+fname = "./datafile.dat"
 
 with open(fname, mode='rb') as fd: # b is important -> binary
     data = fd.read()

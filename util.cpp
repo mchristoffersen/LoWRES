@@ -60,9 +60,7 @@ std::vector<std::complex<float>> generateChirp(
       //std::cout << chirp[i].real() << "," << chirp[i].imag() << std::endl;
     }
 
-    for (size_t i = nsamp; i < nsamp+pad; i++) {
-      chirp[i] = 0;
-    }
+    memset(&chirp+nsamp, 0, pad);
 
     return chirp;
 }
@@ -144,7 +142,7 @@ int saveHdr(FILE* dataFile, double chirpBW, double chirpCF,
 }
 
 // Save a trace
-int saveTrace(FILE* dataFile, float *data, std::string nmea, uhd::time_spec_t time, int traceLen) {
+gpsData saveTrace(FILE* dataFile, float *data, std::string nmea, uhd::time_spec_t time, int traceLen) {
 
     gpsData fix = parseNMEA(nmea);
 
@@ -154,7 +152,7 @@ int saveTrace(FILE* dataFile, float *data, std::string nmea, uhd::time_spec_t ti
     fwrite(&fix, sizeof(fix), 1, dataFile);
     fwrite(data, sizeof(float), traceLen, dataFile);
     
-    return 0;
+    return fix;
 }
 
 // Parse GGA NMEA strings for lat lon elev

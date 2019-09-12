@@ -4,6 +4,7 @@
 #include "recv.h"
 #include "util.h"
 #include "signal.h"
+#include "socket.h"
 
 /***********************************************************************
  * recv_to_file function
@@ -21,7 +22,9 @@ void recv_to_file(uhd::usrp::multi_usrp::sptr usrp,
 {
 
     int num_total_samps = 0;
+    int sockfd = initSocket();
     std::string nmea;
+    gpsData fix;
 
     // create a receive streamer
     uhd::stream_args_t stream_args(cpu_format, wire_format);
@@ -73,7 +76,7 @@ void recv_to_file(uhd::usrp::multi_usrp::sptr usrp,
                            "Got an overflow indication. Please consider the following:\n"
                            "  Your write medium must sustain a rate of %fMB/s.\n"
                            "  Dropped samples will not be written to the file.\n"
-                           "  Please modify this example for your purposes.\n"
+                           "  Please modify this example for yoSeur purposes.\n"
                            "  This message will not appear again.\n")
                            % (usrp->get_rx_rate() * sizeof(std::complex<float>) / 1e6);
             }
@@ -83,8 +86,6 @@ void recv_to_file(uhd::usrp::multi_usrp::sptr usrp,
             throw std::runtime_error(
                 str(boost::format("Receiver error %s") % md.strerror()));
         }
-
-        num_total_samps += num_rx_samps;
 
         // Stack traces
         if (st < stack) {
@@ -99,15 +100,10 @@ void recv_to_file(uhd::usrp::multi_usrp::sptr usrp,
             }
         }
         if(st == stack) {
-            saveTrace(dataFile, &acmltr.front(), nmea, md.time_spec, spt);
-
-            //fwrite((const char*)&acmltr.front(), sizeof(float), spt, dataFile);
-                //fwrite((const char*)&acmltr.front(), sizeof(float), spt, stdout);
-     
+            fix = saveTrace(dataFile, &acmltr.front(), nmea, md.time_spec, spt);
+            guiSend(sockfd, &acmltr.front(), fix, spt); 
             st = 0;
-            for (size_t i = 0; i < spt; i++) {
-                acmltr[i] = 0;
-            }
+            memset(&acmltr.front(), 0, spt*4);
         }
     }
 
@@ -116,7 +112,6 @@ void recv_to_file(uhd::usrp::multi_usrp::sptr usrp,
     rx_stream->issue_stream_cmd(stream_cmd);
 
     // Close files
-
-    fclose(dataFile); //TODO: SAVE CHIRP PARAMS TO FILE - MAYBE RETURN FD FROM THIS FUNCTION?
+    close(sockfd);
 }
 

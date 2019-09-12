@@ -2,7 +2,7 @@ CC       = g++
 CMPFLAGS = -O2 -g
 BSTFLAGS = -lboost_system -lboost_filesystem -lboost_program_options -lboost_thread
 UHDFLAGS = -luhd
-OBJFILES = radar.o xmit.o recv.o util.o signal.o
+OBJFILES = radar.o xmit.o recv.o util.o signal.o socket.o
 TARGET   = radar
 
 all: $(TARGET)
