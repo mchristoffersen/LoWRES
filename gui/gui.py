@@ -15,7 +15,7 @@ import var
 def buildGui():
     # Main window
     mainWindow = tk.Tk()
-    img = tk.PhotoImage(file="/home/lowres/LoWRES/gui_redo/vervet.png")
+    img = tk.PhotoImage(file="/home/lowres/LoWRES/gui/vervet.png")
     mainWindow.tk.call('wm', 'iconphoto', mainWindow._w, img)
     mainWindow.title('LoWRES')
     mainWindow.config(bg='black')
@@ -62,13 +62,13 @@ def buildGui():
     tk.Label(params, text='TX Sampling Frequency (MHz): ', font="Comic 12 bold")\
         .grid(sticky='WE')
     tk.Label(params, textvariable=var.txfs, relief=tk.SUNKEN, bg='White',
-        width=9, font='Comic 12 bold italic')\
+        width=9, font='Comic 12 bold')\
         .grid(row=0, column=1, sticky='WE')
 
     tk.Label(params, text='RX Sampling Frequency (MHz): ', font="Comic 12 bold")\
         .grid(row=1, sticky="W")
     tk.Label(params, textvariable=var.rxfs, relief=tk.SUNKEN, bg='White',
-        width=9, font='Comic 12 bold italic')\
+        width=9, font='Comic 12 bold')\
         .grid(row=1, column=1, sticky='W')
 
     tk.Label(params, text='Trace Length (us):', font="Comic 12 bold")\
@@ -171,7 +171,7 @@ def buildGui():
     live = tk.Frame(txrx)
     live.grid(row=1)
 
-    tk.Label(live, text='RX Signal', font="Arial 16 bold italic").grid()
+    tk.Label(live, text='RX Signal', font="Arial 16 bold").grid()
     rxf = Figure(figsize=(12,4), dpi=100)
     rxf.set_facecolor('#696969')
     var.rxPlot = rxf.add_subplot(111)
@@ -282,7 +282,7 @@ def sendStartCmd():
     eD.send(("SRT:::"+cmd+":::").encode())
     eD.close()
     nsamp = int(float(var.trlenTxt.get())*1e-6*(var.txfs.get()*1e6))
-    t = np.linspace(0, var.chirpLen.get(), nsamp)
+    t = np.linspace(0, float(var.trlenTxt.get()), nsamp)
     var.rxPlot.cla()
     var.rxLine, = var.rxPlot.plot(t, [0]*len(t), 'g')
     var.rxPlot.grid(color='#525252')
@@ -345,9 +345,9 @@ def updateRX():
             var.rxCanvas.flush_events()
         elif(len(data) == struct.calcsize(gpsfmt)):
             data = struct.unpack(gpsfmt, data)
-            var.gpsLat.set(data[3])
-            var.gpsLon.set(data[4])
-            var.gpsElev.set(data[5])
+            var.gpsLat.set(round(data[3],3))
+            var.gpsLon.set(round(data[4],3))
+            var.gpsElev.set(round(data[5],3))
             var.rxtrace.set(data[2])
             var.gpsSat.set(data[7])
     if(var.running):

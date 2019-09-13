@@ -32,12 +32,12 @@ int initSocket() {
 }  
 
 int guiSend(int sockfd, float *data, gpsData fix, int traceLen) {
-    FILE* recvDump;
-    recvDump = fopen("dumpFile.dat", "w");
-    if (recvDump != NULL) {
-        fwrite(data, sizeof(float), traceLen, recvDump);
-        fclose(recvDump);
-    }
+    //FILE* recvDump;
+    //recvDump = fopen("dumpFile.dat", "w");
+    //if (recvDump != NULL) {
+    //    fwrite(data, sizeof(float), traceLen, recvDump);
+    //    fclose(recvDump);
+    //}
     send(sockfd, data, traceLen*4, 0);
     send(sockfd, &fix, sizeof(gpsData), 0);
 
