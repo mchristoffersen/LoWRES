@@ -21,6 +21,7 @@ void recv_to_file(uhd::usrp::multi_usrp::sptr usrp,
     uhd::time_spec_t begin)
 {
 
+    unsigned long long int ntrace = 0;
     int num_total_samps = 0;
     int sockfd = initSocket();
     std::string nmea;
@@ -100,7 +101,9 @@ void recv_to_file(uhd::usrp::multi_usrp::sptr usrp,
             }
         }
         if(st == stack) {
+            ntrace++;
             fix = saveTrace(dataFile, &acmltr.front(), nmea, md.time_spec, spt);
+            fix.ntrace = ntrace;
             guiSend(sockfd, &acmltr.front(), fix, spt); 
             st = 0;
             memset(&acmltr.front(), 0, spt*4);

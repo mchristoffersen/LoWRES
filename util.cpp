@@ -51,7 +51,7 @@ std::vector<std::complex<float>> generateChirp(
     double initFreq = cf-((cf * bw) / 2); // Hz
     double freqSlope = (cf * bw) / len; // Hz/sec
 
-    std::vector<std::complex<float>> chirp(nsamp + pad);
+    std::vector<std::complex<float>> chirp(nsamp + pad, 0);
 
     for (size_t i = 0; i < nsamp; i++) {
       t = ((float)i) / fs;
@@ -59,8 +59,6 @@ std::vector<std::complex<float>> generateChirp(
       chirp[i] = std::complex<float>(amp*cos(sample), amp*sin(sample));
       //std::cout << chirp[i].real() << "," << chirp[i].imag() << std::endl;
     }
-
-    memset(&chirp+nsamp, 0, pad);
 
     return chirp;
 }
@@ -185,9 +183,11 @@ gpsData parseNMEA(std::string nmea) {
         fix.lon = -fix.lon;
     }
 
-    // Skip quality, num sats, horizontal dilution
+    // Skip quality
     strtok(NULL, ",");
-    strtok(NULL, ",");
+
+    // Num sats
+    fix.nsat = atoi(strtok(NULL, ","));
 
     // Dilution of precision
     fix.dop = atof(strtok(NULL, ","));

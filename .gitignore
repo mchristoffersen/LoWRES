@@ -36,3 +36,6 @@
 
 # Target binary
 radar
+
+# Pycache
+__pycache__/

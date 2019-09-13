@@ -18,12 +18,10 @@ def main():
 
     if("SRT:::" in cmd and not running):
       running = True
-      proc = subprocess.Popen("top")
-      print("START COMMAND")
+      proc = subprocess.Popen(cmd.split(":::")[1].split(' '))
       
     elif("STP:::" in cmd and running):
       running = False
       proc.terminate()
-      print("STOP COMMAND")
 
 main()

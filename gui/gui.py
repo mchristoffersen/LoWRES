@@ -4,6 +4,8 @@ import tkinter.font as font
 import numpy as np
 import math
 import socket
+import select
+import struct
 import matplotlib
 matplotlib.use("TkAgg")
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
@@ -13,6 +15,8 @@ import var
 def buildGui():
     # Main window
     mainWindow = tk.Tk()
+    img = tk.PhotoImage(file="/home/lowres/LoWRES/gui_redo/vervet.png")
+    mainWindow.tk.call('wm', 'iconphoto', mainWindow._w, img)
     mainWindow.title('LoWRES')
     mainWindow.config(bg='black')
     #mainWindow.geometry('1300x800')
@@ -27,6 +31,7 @@ def buildGui():
     var.chirpCF = tk.DoubleVar()
     var.chirpLen = tk.DoubleVar()
     var.chirpAmp = tk.DoubleVar()
+    var.chirpAmpV = tk.DoubleVar()
     var.chirpPRF = tk.DoubleVar()
     var.rxtrace = tk.IntVar()
     var.gpsSat = tk.IntVar()
@@ -54,25 +59,25 @@ def buildGui():
     params = tk.Frame(config)
     params.grid(row=1, sticky='NESW')
 
-    tk.Label(params, text='TX Sampling Frequency (MHz): ', font="Comic 12 bold italic")\
+    tk.Label(params, text='TX Sampling Frequency (MHz): ', font="Comic 12 bold")\
         .grid(sticky='WE')
     tk.Label(params, textvariable=var.txfs, relief=tk.SUNKEN, bg='White',
         width=9, font='Comic 12 bold italic')\
         .grid(row=0, column=1, sticky='WE')
 
-    tk.Label(params, text='RX Sampling Frequency (MHz): ', font="Comic 12 bold italic")\
+    tk.Label(params, text='RX Sampling Frequency (MHz): ', font="Comic 12 bold")\
         .grid(row=1, sticky="W")
     tk.Label(params, textvariable=var.rxfs, relief=tk.SUNKEN, bg='White',
         width=9, font='Comic 12 bold italic')\
         .grid(row=1, column=1, sticky='W')
 
-    tk.Label(params, text='Trace Length (us):', font="Comic 12 bold italic")\
+    tk.Label(params, text='Trace Length (us):', font="Comic 12 bold")\
         .grid(row=2, sticky='W')
     trlenBox = tk.Entry(params, bg='pink', textvariable=var.trlenTxt, 
             width=9, font='Comic 12 bold italic')
     trlenBox.grid(row=2, column=1, sticky='W') 
 
-    tk.Label(params, text='Stacking: ', font="Comic 12 bold italic")\
+    tk.Label(params, text='Stacking: ', font="Comic 12 bold")\
         .grid(row=3, sticky='W')
     stackBox = tk.Entry(params, bg='pink', textvariable=var.stackTxt, 
             width=9, font='Comic 12 bold italic')\
@@ -83,15 +88,15 @@ def buildGui():
     sliders.grid(row=2)
 
     tk.Label(sliders, text='Bandwidth\n(%)', 
-        font="Arial 10 bold italic").grid(row=0,column=0, sticky='EW', pady=10)
+        font="Arial 10 bold").grid(row=0,column=0, sticky='EW', pady=10)
     tk.Label(sliders, text='Center\nFrequency\n(MHz)', 
-        font="Arial 10 bold italic").grid(row=0,column=1, sticky='EW', pady=10)
+        font="Arial 10 bold").grid(row=0,column=1, sticky='EW', pady=10)
     tk.Label(sliders, text='Time Length\n(us)', 
-        font="Arial 10 bold italic").grid(row=0,column=2, sticky='EW', pady=10)
+        font="Arial 10 bold").grid(row=0,column=2, sticky='EW', pady=10)
     tk.Label(sliders, text='Amplitude\n(dBm)', 
-        font="Arial 10 bold italic").grid(row=0,column=3, sticky='EW', pady=10)
+        font="Arial 10 bold").grid(row=0,column=3, sticky='EW', pady=10)
     tk.Label(sliders, text='PRF (KHz)', 
-        font="Arial 10 bold italic").grid(row=0,column=4, sticky='EW', pady=10)
+        font="Arial 10 bold").grid(row=0,column=4, sticky='EW', pady=10)
 
 
     tk.Scale(sliders, from_=200, to=-200, troughcolor='cyan', 
@@ -121,19 +126,19 @@ def buildGui():
         .grid(row=1, column=4) #Pulse repitition frequency (KHz)
 
     tk.Entry(sliders, bg='pink', textvariable=var.chirpBW,
-        width=7, font='Comic 12 bold italic')\
+        width=7, font='Comic 12 bold')\
         .grid(row=3, column=0, padx=20) 
     tk.Entry(sliders, bg='pink', textvariable=var.chirpCF,
-        width=7, font='Comic 12 bold italic')\
+        width=7, font='Comic 12 bold')\
         .grid(row=3, column=1, padx=20) 
     tk.Entry(sliders, bg='pink', textvariable=var.chirpLen, 
-        width=7, font='Comic 12 bold italic')\
+        width=7, font='Comic 12 bold')\
         .grid(row=3, column=2, padx=20) 
     tk.Entry(sliders, bg='pink', textvariable=var.chirpAmp, 
-        width=7, font='Comic 12 bold italic')\
+        width=7, font='Comic 12 bold')\
         .grid(row=3, column=3, padx=20) 
     tk.Entry(sliders, bg='pink', textvariable=var.chirpPRF,
-        width=7, font='Comic 12 bold italic')\
+        width=7, font='Comic 12 bold')\
         .grid(row=3, column=4, padx=20)
 
     # Chirp display
@@ -141,7 +146,7 @@ def buildGui():
     chirp.grid(row=1, column=1, rowspan=2)
 
     tk.Label(chirp, text='Chirp Preview', 
-        font="Arial 14 bold italic").grid()
+        font="Arial 16 bold").grid()
 
     chirpf = Figure(figsize=(5,4), dpi=100)
     chirpf.set_facecolor('green')
@@ -169,15 +174,15 @@ def buildGui():
     tk.Label(live, text='RX Signal', font="Arial 16 bold italic").grid()
     rxf = Figure(figsize=(12,4), dpi=100)
     rxf.set_facecolor('#696969')
-    rxPlot = rxf.add_subplot(111)
-    rxPlot.set_facecolor('black')
-    rxPlot.grid(color='#525252')
+    var.rxPlot = rxf.add_subplot(111)
+    var.rxPlot.set_facecolor('black')
+    var.rxPlot.grid(color='#525252')
 
-    rxCanvas = FigureCanvasTkAgg(rxf, master=live)
-    NavigationToolbar2Tk(rxCanvas, toolbar)
-    rxCanvas.draw()
-    rxCanvas.get_tk_widget().config(relief=tk.GROOVE, bd=18)
-    rxCanvas.get_tk_widget().grid(row=1)
+    var.rxCanvas = FigureCanvasTkAgg(rxf, master=live)
+    NavigationToolbar2Tk(var.rxCanvas, toolbar)
+    var.rxCanvas.draw()
+    var.rxCanvas.get_tk_widget().config(relief=tk.GROOVE, bd=18)
+    var.rxCanvas.get_tk_widget().grid(row=1)
 
     rxf.text(.512, 0.06, 'Time (us)', ha='center', va='center')
     rxf.text(0.06, 0.5, 'Voltage (mV)', ha='center', va='center', rotation='vertical')
@@ -257,32 +262,40 @@ def buildGui():
 
 
 def genRadarCmd():
-    cmd = '/home/vervet/LoWRES/radar '\
+    cmd = '/home/lowres/LoWRES/radar '\
         + '--tx-rate ' + str(var.txfs.get()) + 'e6 --rx-rate ' + str(var.rxfs.get()) + 'e6 '\
         + '--tx-freq 0 --rx-freq 0 --chirp-bw '\
         + str(var.chirpBW.get()) + ' --chirp-cf ' + str(var.chirpCF.get()) + 'e6 --chirp-len '\
-        + str(var.chirpLen.get()) + 'e-6 --chirp-amp ' + str(var.chirpAmp.get()) + ' --chirp-prf '\
+        + str(var.chirpLen.get()) + 'e-6 --chirp-amp ' + str(var.chirpAmpV.get()) + ' --chirp-prf '\
         + str(var.chirpPRF.get()) + 'e3 --trace-len ' + var.trlenTxt.get() + 'e-6 --stack '\
         + var.stackTxt.get()
 
     return cmd
 
 def sendStartCmd():
+    var.running = True
     cmd = genRadarCmd()
     eDip = "127.0.0.1"
     eDport = 1997
     eD = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     eD.connect((eDip, eDport))
-    eD.send("SRT:::"+cmd+":::")
+    eD.send(("SRT:::"+cmd+":::").encode())
     eD.close()
+    nsamp = int(float(var.trlenTxt.get())*1e-6*(var.txfs.get()*1e6))
+    t = np.linspace(0, var.chirpLen.get(), nsamp)
+    var.rxPlot.cla()
+    var.rxLine, = var.rxPlot.plot(t, [0]*len(t), 'g')
+    var.rxPlot.grid(color='#525252')
+    var.mainWindow.after(1, updateRX)
 
 def sendStopCmd():
+    var.running = False
     cmd = genRadarCmd()
     eDip = "127.0.0.1"
     eDport = 1997
     eD = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     eD.connect((eDip, eDport))
-    eD.send("STP::::::")
+    eD.send(("STP::::::").encode())
     eD.close()
 
 def plotChirp(event): 
@@ -294,23 +307,60 @@ def plotChirp(event):
     initFreq = (var.chirpCF.get() * 1e6) - (var.chirpCF.get() * 1e6 * (var.chirpBW.get() / 200))
     finalFreq = (var.chirpCF.get() * 1e6) + (var.chirpCF.get() * 1e6 * (var.chirpBW.get() / 200))
     freqSlope = (finalFreq - initFreq) / (var.chirpLen.get() * 1e-6) / 2
-    ampVolt = math.sqrt((10 ** (var.chirpAmp.get() / 10)) * .001 * 50) * math.sqrt(2)
+    var.chirpAmpV.set(math.sqrt((10 ** (var.chirpAmp.get() / 10)) * .001 * 50) * math.sqrt(2))
 
     # chirp gen
     t = 0
     for i in range(numSamps):
-        chirp[i] = ampVolt * math.sin(2*math.pi * (initFreq + freqSlope * t) * t)
+        chirp[i] = var.chirpAmpV.get() * math.sin(2*math.pi * (initFreq + freqSlope * t) * t)
         t += si
 
     # plotting
     var.chirpPlot.cla()
     t = np.linspace(0, var.chirpLen.get(), numSamps)
     var.chirpPlot.set_xlim(0-(si/1e-6), var.chirpLen.get()+(si/1e-6))
-    var.chirpPlot.set_ylim(-ampVolt-.1*ampVolt, ampVolt+.1*ampVolt)
+    ampv = var.chirpAmpV.get()
+    var.chirpPlot.set_ylim(-ampv-.1*ampv, ampv+.1*ampv)
     var.chirpPlot.grid(color='#525252')
     var.chirpPlot.plot(t, chirp, 'g')
     var.chirpCanvas.draw_idle()
 
+def updateRX():
+    if(not var.connected):
+        slct = select.select([var.dataStream], [], [], 0.1)
+        if(len(slct[0]) > 0):
+            var.conn, addr = var.dataStream.accept()
+            var.connected = True
+    if(var.connected):
+        data = var.conn.recv(32768)
+        nsamp = int(float(var.trlenTxt.get())*1e-6*(var.txfs.get()*1e6))
+        tracefmt = 'f'*nsamp
+        gpsfmt = 'qdQffffIf'
+        
+        #print(len(data), struct.calcsize(gpsfmt))
+        if(len(data) == struct.calcsize(tracefmt)):
+            data = struct.unpack(tracefmt, data)
+            var.rxLine.set_ydata(data)
+            var.rxCanvas.draw()
+            var.rxCanvas.flush_events()
+        elif(len(data) == struct.calcsize(gpsfmt)):
+            data = struct.unpack(gpsfmt, data)
+            var.gpsLat.set(data[3])
+            var.gpsLon.set(data[4])
+            var.gpsElev.set(data[5])
+            var.rxtrace.set(data[2])
+            var.gpsSat.set(data[7])
+    if(var.running):
+        var.mainWindow.after(10, updateRX)
+    elif(not var.running):
+        var.connected = False
+        var.conn.close()
+
+def networkInit():
+    var.dataStream = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    var.dataStream.bind(("localhost", 1999))
+    var.dataStream.listen()
+    var.dataStream.setblocking(0)
 
 def defaults():
     var.rxfs.set(100)
@@ -320,20 +370,24 @@ def defaults():
     var.chirpBW.set(100)
     var.chirpCF.set(5)
     var.chirpAmp.set(0)
+    var.chirpAmpV.set(.31618)
     var.chirpLen.set(5)
     var.chirpPRF.set(2)
     var.rxtrace.set(0)
     var.gpsSat.set(0)
     var.gpsLon.set(0)
     var.gpsLat.set(0)
-    var.gpsElev.set(12354)
-
+    var.gpsElev.set(0)
+    var.running = False
+    var.connected = False
+    
 
 def main():
-    mainWindow = buildGui()
+    var.mainWindow = buildGui()
+    networkInit()
     defaults()
     plotChirp(None)
-    mainWindow.mainloop()
+    var.mainWindow.mainloop()
 
 main()
 

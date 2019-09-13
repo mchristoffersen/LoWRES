@@ -16,7 +16,7 @@ int initSocket() {
     struct sockaddr_in serv_addr; 
     if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {}
     serv_addr.sin_family = AF_INET; 
-    serv_addr.sin_port = htons(1997); 
+    serv_addr.sin_port = htons(1999); 
        
     // Convert IPv4 and IPv6 addresses from text to binary form 
     if(inet_pton(AF_INET, "127.0.0.1", &serv_addr.sin_addr)<=0)  
@@ -39,8 +39,7 @@ int guiSend(int sockfd, float *data, gpsData fix, int traceLen) {
         fclose(recvDump);
     }
     send(sockfd, data, traceLen*4, 0);
-    
-    //send(sockfd, &fix, sizeof(gpsData), 0);
+    send(sockfd, &fix, sizeof(gpsData), 0);
 
     return 0;
 }

@@ -213,8 +213,6 @@ int UHD_SAFE_MAIN(int argc, char* argv[])
         UHD_ASSERT_THROW(lo_locked.to_bool());
     }
 
-    tx_sensor_names = usrp->get_mboard_sensor_names(0);
-    rx_sensor_names = usrp->get_mboard_sensor_names(0);
 
     // Some chirp-determined settings and checks
     spb = rx_rate/chprf;
@@ -232,10 +230,12 @@ int UHD_SAFE_MAIN(int argc, char* argv[])
     // Generate a chirp to transmit
     std::vector<std::complex<float>> chirp = generateChirp(champ, chcf, chbw, chlen, tx_rate, chprf);
 
+
     // allocate a buffer which we re-use for each channel
     //int num_channels = tx_channel_nums.size();
 
-    // Wait for GPS lock
+
+    // GPS lock
     bool gps_locked = usrp->get_mboard_sensor("gps_locked").to_bool();
     if (gps_locked) {
         std::cout << boost::format("GPS Locked\n");
@@ -244,6 +244,7 @@ int UHD_SAFE_MAIN(int argc, char* argv[])
             << "WARNING:  GPS not locked - time will not be accurate until locked"
             << std::endl;
     }
+
 
     // Amplifier triggering via GPIO[3]
     usrp->set_gpio_attr("FP0", "DDR", AMP_GPIO_MASK, AMP_GPIO_MASK); // DDR
@@ -257,6 +258,7 @@ int UHD_SAFE_MAIN(int argc, char* argv[])
     usrp->set_time_next_pps(gps_time + 1.0);
 
     begin = gps_time + 6.0;
+
 
     boost::this_thread::sleep_for(boost::chrono::seconds(2)); // Ensure PPS sync
 
@@ -273,7 +275,7 @@ int UHD_SAFE_MAIN(int argc, char* argv[])
 
     // Open data file and write header
     char filename[38];
-    strcpy(filename, "/home/vervet/data/");
+    strcpy(filename, "/home/lowres/data/");
     generate_out_filename(filename+18, begin);
     std::cout << filename << std::endl;
     dataFile = fopen(filename, "wb");

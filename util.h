@@ -3,10 +3,12 @@
 struct gpsData {
     int64_t fullSec;
     double fracsec;
+    unsigned long long int ntrace;
     float lat;
     float lon;
     float alt;
     float dop;
+    unsigned int nsat;
 };
 
 gpsData parseNMEA(std::string nmea);
