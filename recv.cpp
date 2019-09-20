@@ -24,6 +24,7 @@ void recv_to_file(uhd::usrp::multi_usrp::sptr usrp,
     unsigned long long int ntrace = 0;
     int num_total_samps = 0;
     int stsend = 0;
+    int sockfd = initSocket();
     std::string nmea;
     gpsData fix;
 

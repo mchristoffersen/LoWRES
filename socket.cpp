@@ -19,7 +19,7 @@ int initSocket() {
     serv_addr.sin_port = htons(1999); 
     //std::cout << "Pre connect\n"; 
     // Convert IPv4 and IPv6 addresses from text to binary form 
-    if(inet_pton(AF_INET, "192.168.1.114", &serv_addr.sin_addr)<=0)  
+    if(inet_pton(AF_INET, "192.168.1.60", &serv_addr.sin_addr)<=0)  
     {
         std::cout << "Conversion issue" << std::endl;
     } 

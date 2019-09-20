@@ -13,7 +13,7 @@ from matplotlib.figure import Figure
 import var
 
 etip = "192.168.1.35"
-ltip = "192.168.1.114"
+ltip = "192.168.1.60"
 
 def buildGui():
     # Main window

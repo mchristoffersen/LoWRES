@@ -1,7 +1,7 @@
 import socket
 import subprocess
 
-ltip = "192.168.1.75"
+ltip = "192.168.1.60"
 etip = "192.168.1.35"
 
 #litp = "localhost"
