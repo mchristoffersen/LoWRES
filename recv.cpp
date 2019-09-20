@@ -1,4 +1,5 @@
 #include <uhd/usrp/multi_usrp.hpp>
+#include <boost/thread/thread.hpp>
 #include <cstdio>
 #include <iostream>
 #include "recv.h"
@@ -23,6 +24,7 @@ void recv_to_file(uhd::usrp::multi_usrp::sptr usrp,
 
     unsigned long long int ntrace = 0;
     int num_total_samps = 0;
+    int stsend = 0;
     int sockfd = initSocket();
     std::string nmea;
     gpsData fix;
@@ -70,6 +72,12 @@ void recv_to_file(uhd::usrp::multi_usrp::sptr usrp,
             break;
         }
         if (md.error_code == uhd::rx_metadata_t::ERROR_CODE_OVERFLOW) {
+                stream_cmd.stream_mode = uhd::stream_cmd_t::STREAM_MODE_STOP_CONTINUOUS;
+                rx_stream->issue_stream_cmd(stream_cmd); // stream command
+                stream_cmd.stream_now = false;
+                stream_cmd.time_spec = uhd::time_spec_t(usrp->get_time_now().get_full_secs() + 2) ;
+                stream_cmd.stream_mode = uhd::stream_cmd_t::STREAM_MODE_START_CONTINUOUS;
+                rx_stream->issue_stream_cmd(stream_cmd); // stream command
             if (overflow_message) {
                 overflow_message = false;
                 std::cerr
@@ -96,15 +104,22 @@ void recv_to_file(uhd::usrp::multi_usrp::sptr usrp,
             st ++;
 
             if(st == floor(stack/2)) {
-                // Get location from middle of stack
-                nmea = usrp->get_mboard_sensor("gps_gpgga").value;
+                try {
+                    nmea = usrp->get_mboard_sensor("gps_gpgga").value;
+                } catch(const char* msg) {
+                    std::cerr << msg << std::endl;
+                }
             }
         }
         if(st == stack) {
             ntrace++;
             fix = saveTrace(dataFile, &acmltr.front(), nmea, md.time_spec, spt);
             fix.ntrace = ntrace;
-            guiSend(sockfd, &acmltr.front(), fix, spt); 
+            stsend++;
+            if(stsend == 4) {
+                stsend = 0;
+                guiSend(sockfd, &acmltr.front(), fix, spt);
+            }
             st = 0;
             memset(&acmltr.front(), 0, spt*4);
         }

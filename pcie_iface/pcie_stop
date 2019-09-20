@@ -1,1 +1,2 @@
 sudo /usr/local/bin/niusrprio_pcie stop
+touch /home/lowres/LoWRES/STOPPED_PCIE

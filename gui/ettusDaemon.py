@@ -1,9 +1,15 @@
 import socket
 import subprocess
 
+ltip = "192.168.1.75"
+etip = "192.168.1.35"
+
+#litp = "localhost"
+#etip = "localhost"
+
 def main():
   controller = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-  controller.bind(("localhost", 1997))
+  controller.bind((etip, 1997))
   controller.listen()
   
   listen = True
@@ -19,9 +25,11 @@ def main():
     if("SRT:::" in cmd and not running):
       running = True
       proc = subprocess.Popen(cmd.split(":::")[1].split(' '))
+      #print(cmd.split(":::")[1].split(' '))
       
     elif("STP:::" in cmd and running):
       running = False
       proc.terminate()
+      #print("STOP!")
 
 main()
