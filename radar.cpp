@@ -23,6 +23,7 @@
 #include "xmit.h"
 #include "recv.h"
 #include "signal.h"
+#include "socket.h"
 
 namespace po = boost::program_options;
 
@@ -53,12 +54,15 @@ int UHD_SAFE_MAIN(int argc, char* argv[])
     double chbw, champ, chlen, chcf, chprf, trlen;
     unsigned int stack;
 
+    // Pipe for communicating recvd data to saver
+    int fd[2];
+
     // setup the program options
     po::options_description desc("Allowed options");
     // clang-format off
     desc.add_options()
         ("help", "help message")
-        ("args", po::value<std::string>(&args)->default_value(""), "uhd device address args")
+        //("args", po::value<std::string>(&args)->default_value(""), "uhd device address args")
         ("settling", po::value<double>(&settling)->default_value(double(0.2)), "settling time (seconds) before receiving")
         ("tx-rate", po::value<double>(&tx_rate), "rate of transmit outgoing samples")
         ("rx-rate", po::value<double>(&rx_rate), "rate of receive incoming samples")
@@ -79,6 +83,7 @@ int UHD_SAFE_MAIN(int argc, char* argv[])
     // Options short-circuited from command line options
     otw = "sc16";
     ref = "gpsdo";
+    args = "type=x300,addr=192.168.30.2,second_addr=192.168.40.2";
     std::vector<size_t> tx_channel_nums = {0};
     std::vector<size_t> rx_channel_nums = {0};
     tx_subdev = "A:AB";
@@ -101,12 +106,15 @@ int UHD_SAFE_MAIN(int argc, char* argv[])
               << std::endl;
     uhd::usrp::multi_usrp::sptr usrp = uhd::usrp::multi_usrp::make(args);
 
+    std::cout << "USRP device created\n";
+
     // Select the subdevice
     usrp->set_tx_subdev_spec(tx_subdev);
     usrp->set_rx_subdev_spec(rx_subdev);
 
     // Lock mboard clock to gpsdo
-    usrp->set_sync_source(ref, ref);
+    usrp->set_clock_source(ref);
+    usrp->set_time_source(ref);
 
     //std::cout << boost::format("Using TX Device: %s") % usrp->get_pp_string()
     //          << std::endl;
@@ -195,6 +203,7 @@ int UHD_SAFE_MAIN(int argc, char* argv[])
     uhd::tx_streamer::sptr tx_stream = usrp->get_tx_stream(stream_args);
 
     // Check Ref and LO Lock detect
+    
     std::vector<std::string> tx_sensor_names, rx_sensor_names;
     tx_sensor_names = usrp->get_tx_sensor_names(0);
     if (std::find(tx_sensor_names.begin(), tx_sensor_names.end(), "lo_locked")
@@ -212,7 +221,7 @@ int UHD_SAFE_MAIN(int argc, char* argv[])
                   << std::endl;
         UHD_ASSERT_THROW(lo_locked.to_bool());
     }
-
+    
 
     // Some chirp-determined settings and checks
     spb = rx_rate/chprf;
@@ -236,6 +245,7 @@ int UHD_SAFE_MAIN(int argc, char* argv[])
 
 
     // GPS lock
+    /*
     bool gps_locked = usrp->get_mboard_sensor("gps_locked").to_bool();
     if (gps_locked) {
         std::cout << boost::format("GPS Locked\n");
@@ -244,7 +254,15 @@ int UHD_SAFE_MAIN(int argc, char* argv[])
             << "WARNING:  GPS not locked - time will not be accurate until locked"
             << std::endl;
     }
+    */
+/*
+    while(! (usrp->get_mboard_sensor("gps_locked").to_bool())) {
+        std::cout << usrp->get_mboard_sensor("gps_gpgga").value << std::endl;
+        boost::this_thread::sleep_for(boost::chrono::seconds(2)); // Ensure PPS sync
 
+    }
+*/
+    //usrp->set_time_source(ref);
 
     // Amplifier triggering via GPIO[3]
     usrp->set_gpio_attr("FP0", "DDR", AMP_GPIO_MASK, AMP_GPIO_MASK); // DDR
@@ -257,7 +275,7 @@ int UHD_SAFE_MAIN(int argc, char* argv[])
         int64_t(usrp->get_mboard_sensor("gps_time").to_int()));
     usrp->set_time_next_pps(gps_time + 1.0);
 
-    begin = gps_time + 6.0;
+    begin = uhd::time_spec_t(gps_time.get_full_secs() + 6.0);
 
 
     boost::this_thread::sleep_for(boost::chrono::seconds(2)); // Ensure PPS sync
@@ -281,18 +299,38 @@ int UHD_SAFE_MAIN(int argc, char* argv[])
     dataFile = fopen(filename, "wb");
     saveHdr(dataFile, chbw, chcf, chlen, champ, chprf, trlen, rx_rate, stack, begin);
 
+    // Open socket
+    int sockfd = initSocket();
+    std::cout << "Started socket\n";
+
+    // Set up output pipe
+    if(pipe(fd)) {
+        std::cout << "Failure creating pipe\n";
+        return 0;
+    }
+
     // start transmit worker thread
     boost::thread_group transmit_thread;
     transmit_thread.create_thread(boost::bind(
         &transmit_worker, usrp, chirp, tx_stream, md, chprf));
     //transmit_worker(usrp, chirp, tx_stream, md, chprf);
 
+    // Start data handler thread
+    boost::thread_group handler_thread;
+    handler_thread.create_thread(boost::bind(
+      &traceHandler, usrp, dataFile, sockfd, fd, spt));
+
     // recv to file
-    recv_to_file(usrp, "fc32", otw, file, spb, spt, dataFile, stack, chprf, begin);
+    recv_to_file(usrp, "fc32", otw, spb, spt, stack, chprf, begin, fd);
 
     // clean up transmit worker
     stop_signal_called = true;
     transmit_thread.join_all();
+    handler_thread.join_all();
+
+    // final clean up
+    close(sockfd);
+    fclose(dataFile);
 
     // finished
     std::cout << std::endl << "Done!" << std::endl << std::endl;

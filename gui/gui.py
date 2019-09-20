@@ -12,10 +12,13 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolb
 from matplotlib.figure import Figure
 import var
 
+etip = "192.168.1.35"
+ltip = "192.168.1.114"
+
 def buildGui():
     # Main window
     mainWindow = tk.Tk()
-    img = tk.PhotoImage(file="/home/lowres/LoWRES/gui/vervet.png")
+    img = tk.PhotoImage(file="/home/mchristo/lowres_gui/vervet.png")
     mainWindow.tk.call('wm', 'iconphoto', mainWindow._w, img)
     mainWindow.title('LoWRES')
     mainWindow.config(bg='black')
@@ -107,7 +110,7 @@ def buildGui():
     tk.Scale(sliders, from_=10, to=1, troughcolor='cyan',
         variable=var.chirpCF, width=35, length=250,
         activebackground='lightpink', command=plotChirp,
-        tickinterval=1, showvalue=tk.FALSE)\
+        resolution=.5, tickinterval=1, showvalue=tk.FALSE)\
         .grid(row=1, column=1) #center frequency (MHz)
     tk.Scale(sliders, from_=10, to=1, troughcolor='cyan',
         variable=var.chirpLen, width=35, length=250, command=plotChirp,
@@ -275,7 +278,7 @@ def genRadarCmd():
 def sendStartCmd():
     var.running = True
     cmd = genRadarCmd()
-    eDip = "127.0.0.1"
+    eDip = etip
     eDport = 1997
     eD = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     eD.connect((eDip, eDport))
@@ -291,7 +294,7 @@ def sendStartCmd():
 def sendStopCmd():
     var.running = False
     cmd = genRadarCmd()
-    eDip = "127.0.0.1"
+    eDip = etip
     eDport = 1997
     eD = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     eD.connect((eDip, eDport))
@@ -332,35 +335,41 @@ def updateRX():
             var.conn, addr = var.dataStream.accept()
             var.connected = True
     if(var.connected):
-        data = var.conn.recv(32768)
+        while(len(var.dbuf) < 20048):
+            data = var.conn.recv(4096)
+            var.dbuf = var.dbuf + data
+
         nsamp = int(float(var.trlenTxt.get())*1e-6*(var.txfs.get()*1e6))
         tracefmt = 'f'*nsamp
         gpsfmt = 'qdQffffIf'
         
-        #print(len(data), struct.calcsize(gpsfmt))
-        if(len(data) == struct.calcsize(tracefmt)):
-            data = struct.unpack(tracefmt, data)
-            var.rxLine.set_ydata(data)
-            var.rxCanvas.draw()
-            var.rxCanvas.flush_events()
-        elif(len(data) == struct.calcsize(gpsfmt)):
-            data = struct.unpack(gpsfmt, data)
-            var.gpsLat.set(round(data[3],3))
-            var.gpsLon.set(round(data[4],3))
-            var.gpsElev.set(round(data[5],3))
-            var.rxtrace.set(data[2])
-            var.gpsSat.set(data[7])
+        #print(len(data0), len(data1), struct.calcsize(gpsfmt), struct.calcsize(tracefmt))
+        trace = var.dbuf[0:20000]
+        gps = var.dbuf[20000:20048]
+        #print(len(trace), len(gps))
+        #if(len(data) == struct.calcsize(tracefmt)):
+        data = struct.unpack(tracefmt, trace)
+        var.rxLine.set_ydata(data)
+        var.rxCanvas.draw()
+        var.rxCanvas.flush_events()
+        #elif(len(data) == struct.calcsize(gpsfmt)):
+        data = struct.unpack(gpsfmt, gps)
+        var.gpsLat.set(round(data[3],3))
+        var.gpsLon.set(round(data[4],3))
+        var.gpsElev.set(round(data[5],3))
+        var.rxtrace.set(data[2])
+        var.gpsSat.set(data[7])
+        var.dbuf = var.dbuf[20048::]
     if(var.running):
         var.mainWindow.after(10, updateRX)
     elif(not var.running):
         var.connected = False
-        var.conn.close()
 
 def networkInit():
     var.dataStream = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    var.dataStream.bind(("localhost", 1999))
+    var.dataStream.bind((ltip, 1999))
     var.dataStream.listen()
-    var.dataStream.setblocking(0)
+    var.dataStream.settimeout(10)
 
 def defaults():
     var.rxfs.set(100)

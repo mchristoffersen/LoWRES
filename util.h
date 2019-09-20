@@ -13,8 +13,11 @@ struct gpsData {
 
 gpsData parseNMEA(std::string nmea);
 
-gpsData saveTrace(FILE* dataFile, 
-    float *data, std::string nmea, uhd::time_spec_t time, int traceLen);
+int saveTrace(FILE* dataFile, 
+    float *data, gpsData fix, uhd::time_spec_t time, int traceLen);
+
+int traceHandler(uhd::usrp::multi_usrp::sptr usrp, 
+                  FILE* dataFile, int sockfd, int* p, int spt);
 
 void generate_out_filename(
     char *filename, uhd::time_spec_t begin);

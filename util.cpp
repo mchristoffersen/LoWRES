@@ -7,6 +7,8 @@
 #include <iostream>
 #include <time.h>
 #include "util.h"
+#include "signal.h"
+#include "socket.h"
 
 /***********************************************************************
  * Utilities
@@ -88,6 +90,40 @@ std::vector<std::complex<float>> generateGate(
     return gate;
 }
 
+int traceHandler(uhd::usrp::multi_usrp::sptr usrp, 
+                  FILE* dataFile, int sockfd, int* p, int spt) {
+    gpsData fix;
+    std::string nmea;
+    uhd::time_spec_t time;
+    size_t rb = 0;
+    float* trace = (float*)malloc(spt*sizeof(float));
+    unsigned long long int ntrace;
+
+    while (not stop_signal_called) {
+        nmea = usrp->get_mboard_sensor("gps_gpgga").value;
+        fix = parseNMEA(nmea);
+        rb = read(p[0], &time, sizeof(uhd::time_spec_t));
+        if(rb != sizeof(uhd::time_spec_t)) {
+            std::cout << "Failure reading time spec\n";
+        }
+        rb = read(p[0], trace, spt*sizeof(float));
+        if(rb != spt*sizeof(float)) {
+            std::cout << "Failure reading data\n";
+        }
+        rb = read(p[0], &ntrace, sizeof(unsigned long long int));
+        if(rb != sizeof(unsigned long long int)) {
+            std::cout << "Failure reading ntrace\n";
+        }
+
+        fix.ntrace = ntrace;
+
+        saveTrace(dataFile, trace, fix, time, spt);
+        guiSend(sockfd, trace, fix, spt);
+    }
+    return 0;
+}
+    
+
 
 // Generate and save header
 int saveHdr(FILE* dataFile, double chirpBW, double chirpCF,
@@ -140,9 +176,9 @@ int saveHdr(FILE* dataFile, double chirpBW, double chirpCF,
 }
 
 // Save a trace
-gpsData saveTrace(FILE* dataFile, float *data, std::string nmea, uhd::time_spec_t time, int traceLen) {
+int saveTrace(FILE* dataFile, float *data, gpsData fix, uhd::time_spec_t time, int traceLen) {
 
-    gpsData fix = parseNMEA(nmea);
+    //gpsData fix = parseNMEA(nmea);
 
     fix.fullSec = time.get_full_secs();
     fix.fracsec = time.get_frac_secs();
@@ -150,7 +186,7 @@ gpsData saveTrace(FILE* dataFile, float *data, std::string nmea, uhd::time_spec_
     fwrite(&fix, sizeof(fix), 1, dataFile);
     fwrite(data, sizeof(float), traceLen, dataFile);
     
-    return fix;
+    return 0;
 }
 
 // Parse GGA NMEA strings for lat lon elev

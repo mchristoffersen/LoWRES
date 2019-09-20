@@ -17,17 +17,19 @@ int initSocket() {
     if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {}
     serv_addr.sin_family = AF_INET; 
     serv_addr.sin_port = htons(1999); 
-       
+    //std::cout << "Pre connect\n"; 
     // Convert IPv4 and IPv6 addresses from text to binary form 
-    if(inet_pton(AF_INET, "127.0.0.1", &serv_addr.sin_addr)<=0)  
+    if(inet_pton(AF_INET, "192.168.1.114", &serv_addr.sin_addr)<=0)  
     {
         std::cout << "Conversion issue" << std::endl;
     } 
+    //std::cout << "Mid connect\n"; 
    
     if (connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) 
     {
         std::cout << "Connection issue" << std::endl;
     } 
+    //std::cout << "Post connect \n";
     return sock;
 }  
 
@@ -38,8 +40,10 @@ int guiSend(int sockfd, float *data, gpsData fix, int traceLen) {
     //    fwrite(data, sizeof(float), traceLen, recvDump);
     //    fclose(recvDump);
     //}
+    //std::cout << "Pre send\n";
     send(sockfd, data, traceLen*4, 0);
     send(sockfd, &fix, sizeof(gpsData), 0);
+    //std::cout << "Post send\n";
 
     return 0;
 }

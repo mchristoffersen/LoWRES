@@ -31,3 +31,4 @@ running = None
 connected = None
 conn = None
 
+dbuf = b''

@@ -1,4 +1,5 @@
 #include <uhd/usrp/multi_usrp.hpp>
+#include <boost/thread/thread.hpp>
 #include <cstdio>
 #include <iostream>
 #include "recv.h"
@@ -12,18 +13,17 @@
 void recv_to_file(uhd::usrp::multi_usrp::sptr usrp,
     const std::string& cpu_format,
     const std::string& wire_format,
-    const std::string& file,
     size_t spb,
     size_t spt,
-    FILE *dataFile,
     int stack,
     double prf,
-    uhd::time_spec_t begin)
+    uhd::time_spec_t begin,
+    int *p)
 {
 
     unsigned long long int ntrace = 0;
     int num_total_samps = 0;
-    int sockfd = initSocket();
+    int stsend = 0;
     std::string nmea;
     gpsData fix;
 
@@ -70,6 +70,12 @@ void recv_to_file(uhd::usrp::multi_usrp::sptr usrp,
             break;
         }
         if (md.error_code == uhd::rx_metadata_t::ERROR_CODE_OVERFLOW) {
+                stream_cmd.stream_mode = uhd::stream_cmd_t::STREAM_MODE_STOP_CONTINUOUS;
+                rx_stream->issue_stream_cmd(stream_cmd); // stream command
+                stream_cmd.stream_now = false;
+                stream_cmd.time_spec = uhd::time_spec_t(usrp->get_time_now().get_full_secs() + 2) ;
+                stream_cmd.stream_mode = uhd::stream_cmd_t::STREAM_MODE_START_CONTINUOUS;
+                rx_stream->issue_stream_cmd(stream_cmd); // stream command
             if (overflow_message) {
                 overflow_message = false;
                 std::cerr
@@ -83,38 +89,40 @@ void recv_to_file(uhd::usrp::multi_usrp::sptr usrp,
             }
             continue;
         }
-        if (md.error_code != uhd::rx_metadata_t::ERROR_CODE_NONE) {
-            throw std::runtime_error(
-                str(boost::format("Receiver error %s") % md.strerror()));
-        }
+        //if (md.error_code != uhd::rx_metadata_t::ERROR_CODE_NONE) {
+        //    throw std::runtime_error(
+        //        str(boost::format("Receiver error %s") % md.strerror()));
+        //}
 
         // Stack traces
         if (st < stack) {
             for (size_t i = 0; i < spt; i++) {
                 acmltr[i] += buff_ptrs[0][i].real()/stack;
             }
-            st ++;
+            st++;
 
-            if(st == floor(stack/2)) {
-                // Get location from middle of stack
-                nmea = usrp->get_mboard_sensor("gps_gpgga").value;
+            if(st == floor(stack/2)) { 
+                write(p[1], &md.time_spec, sizeof(uhd::time_spec_t));
             }
         }
         if(st == stack) {
             ntrace++;
-            fix = saveTrace(dataFile, &acmltr.front(), nmea, md.time_spec, spt);
-            fix.ntrace = ntrace;
-            guiSend(sockfd, &acmltr.front(), fix, spt); 
+            write(p[1], &acmltr.front(), spt*4);
+            write(p[1], &ntrace, sizeof(unsigned long long int));
+            //fix = saveTrace(dataFile, &acmltr.front(), nmea, md.time_spec, spt);
+            //fix.ntrace = ntrace;
+            //stsend++;
+            //if(stsend == 4) {
+            //    stsend = 0;
+            //    guiSend(sockfd, &acmltr.front(), fix, spt);
+            //}
             st = 0;
-            memset(&acmltr.front(), 0, spt*4);
+            memset(&acmltr.front(), 0, spt*sizeof(float));
         }
     }
 
     // Shut down receiver
     stream_cmd.stream_mode = uhd::stream_cmd_t::STREAM_MODE_STOP_CONTINUOUS;
     rx_stream->issue_stream_cmd(stream_cmd);
-
-    // Close files
-    close(sockfd);
 }
 
