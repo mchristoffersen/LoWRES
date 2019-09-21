@@ -24,7 +24,6 @@ void recv_to_file(uhd::usrp::multi_usrp::sptr usrp,
     unsigned long long int ntrace = 0;
     int num_total_samps = 0;
     int stsend = 0;
-    int sockfd = initSocket();
     std::string nmea;
     gpsData fix;
 
@@ -43,8 +42,6 @@ void recv_to_file(uhd::usrp::multi_usrp::sptr usrp,
     for (size_t i = 0; i < buffs.size(); i++) {
         buff_ptrs.push_back(&buffs[i].front());
     }
-
-    bool overflow_message = true;
 
     double timeout = 5;
     // setup streaming
@@ -68,26 +65,15 @@ void recv_to_file(uhd::usrp::multi_usrp::sptr usrp,
     
         if (md.error_code == uhd::rx_metadata_t::ERROR_CODE_TIMEOUT) {
             std::cout << boost::format("Timeout while streaming") << std::endl;
-            break;
+            continue;
         }
         if (md.error_code == uhd::rx_metadata_t::ERROR_CODE_OVERFLOW) {
-                stream_cmd.stream_mode = uhd::stream_cmd_t::STREAM_MODE_STOP_CONTINUOUS;
-                rx_stream->issue_stream_cmd(stream_cmd); // stream command
-                stream_cmd.stream_now = false;
-                stream_cmd.time_spec = uhd::time_spec_t(usrp->get_time_now().get_full_secs() + 2) ;
-                stream_cmd.stream_mode = uhd::stream_cmd_t::STREAM_MODE_START_CONTINUOUS;
-                rx_stream->issue_stream_cmd(stream_cmd); // stream command
-            if (overflow_message) {
-                overflow_message = false;
-                std::cerr
-                    << boost::format(
-                           "Got an overflow indication. Please consider the following:\n"
-                           "  Your write medium must sustain a rate of %fMB/s.\n"
-                           "  Dropped samples will not be written to the file.\n"
-                           "  Please modify this example for yoSeur purposes.\n"
-                           "  This message will not appear again.\n")
-                           % (usrp->get_rx_rate() * sizeof(std::complex<float>) / 1e6);
-            }
+   	    stream_cmd.stream_mode = uhd::stream_cmd_t::STREAM_MODE_STOP_CONTINUOUS;
+            rx_stream->issue_stream_cmd(stream_cmd); // stream command
+  	    stream_cmd.stream_now = false;
+            stream_cmd.time_spec = uhd::time_spec_t(usrp->get_time_now().get_full_secs() + 2) ;
+            stream_cmd.stream_mode = uhd::stream_cmd_t::STREAM_MODE_START_CONTINUOUS;
+            rx_stream->issue_stream_cmd(stream_cmd); // stream command
             continue;
         }
         //if (md.error_code != uhd::rx_metadata_t::ERROR_CODE_NONE) {

@@ -1,6 +1,7 @@
 #pragma once
 
 struct gpsData {
+    double sanity;
     int64_t fullSec;
     double fracsec;
     unsigned long long int ntrace;

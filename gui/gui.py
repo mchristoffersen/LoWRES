@@ -13,12 +13,13 @@ from matplotlib.figure import Figure
 import var
 
 etip = "192.168.1.35"
-ltip = "192.168.1.60"
+ltip = ""
 
 def buildGui():
     # Main window
     mainWindow = tk.Tk()
-    img = tk.PhotoImage(file="/home/mchristo/lowres_gui/vervet.png")
+    mainWindow.geometry("+350+200")
+    img = tk.PhotoImage(file="/home/mchristo/proj/LoWRES/gui/vervet.png")
     mainWindow.tk.call('wm', 'iconphoto', mainWindow._w, img)
     mainWindow.title('LoWRES')
     mainWindow.config(bg='black')
@@ -146,7 +147,7 @@ def buildGui():
 
     # Chirp display
     chirp = tk.Frame(config)
-    chirp.grid(row=1, column=1, rowspan=2)
+    chirp.grid(row=0, column=1, rowspan=3)
 
     tk.Label(chirp, text='Chirp Preview', 
         font="Arial 16 bold").grid()
@@ -178,8 +179,8 @@ def buildGui():
     rxf = Figure(figsize=(12,4), dpi=100)
     rxf.set_facecolor('#696969')
     var.rxPlot = rxf.add_subplot(111)
-    var.rxPlot.set_facecolor('black')
-    var.rxPlot.grid(color='#525252')
+    var.rxPlot.set_facecolor('grey')
+    #var.rxPlot.grid(color='#525252')
 
     var.rxCanvas = FigureCanvasTkAgg(rxf, master=live)
     NavigationToolbar2Tk(var.rxCanvas, toolbar)
@@ -277,6 +278,7 @@ def genRadarCmd():
 
 def sendStartCmd():
     var.running = True
+    var.rxPlot.set_facecolor('black')
     cmd = genRadarCmd()
     eDip = etip
     eDport = 1997
@@ -289,10 +291,13 @@ def sendStartCmd():
     var.rxPlot.cla()
     var.rxLine, = var.rxPlot.plot(t, [0]*len(t), 'g')
     var.rxPlot.grid(color='#525252')
+    var.rxCanvas.draw()
+    var.rxCanvas.flush_events()
     var.mainWindow.after(1, updateRX)
 
 def sendStopCmd():
     var.running = False
+    var.dbuf = b''
     cmd = genRadarCmd()
     eDip = etip
     eDport = 1997
@@ -300,6 +305,9 @@ def sendStopCmd():
     eD.connect((eDip, eDport))
     eD.send(("STP::::::").encode())
     eD.close()
+    var.rxPlot.set_facecolor('grey')
+    var.rxCanvas.draw()
+    var.rxCanvas.flush_events()
 
 def plotChirp(event): 
     numSamps = int(var.txfs.get()*1e6*var.chirpLen.get()*1e-6)
@@ -329,37 +337,62 @@ def plotChirp(event):
     var.chirpCanvas.draw_idle()
 
 def updateRX():
+    gpslen = 56
+    datalen = 20000
+    plen = gpslen+datalen
+
     if(not var.connected):
         slct = select.select([var.dataStream], [], [], 0.1)
         if(len(slct[0]) > 0):
             var.conn, addr = var.dataStream.accept()
             var.connected = True
     if(var.connected):
-        while(len(var.dbuf) < 20048):
+        while(len(var.dbuf) < plen):
             data = var.conn.recv(4096)
+            if(len(data) == 0):
+              print("RX timeout")
+              return
             var.dbuf = var.dbuf + data
+  
+        if(var.dbuf.rfind(b'\xb8\xd5\xdb_\xb9U\xe7C')):
+            spos = var.dbuf.rfind(b'\xb8\xd5\xdb_\xb9U\xe7C')
+            var.dbuf = var.dbuf[spos::]
+            var.mainWindow.after(10, updateRX)
+            print("Data shortening")
+            return
+
+        if(var.dbuf.find(b'\xb8\xd5\xdb_\xb9U\xe7C')):
+            spos = var.dbuf.find(b'\xb8\xd5\xdb_\xb9U\xe7C')
+            if(spos > 0):
+                var.dbuf = var.dbuf[spos::]
+            else:
+                var.dbuf = b''
+            print("Data misalignment")
+            var.mainWindow.after(10, updateRX)
+            return
 
         nsamp = int(float(var.trlenTxt.get())*1e-6*(var.txfs.get()*1e6))
         tracefmt = 'f'*nsamp
-        gpsfmt = 'qdQffffIf'
+        gpsfmt = 'dqdQffffIf'
         
         #print(len(data0), len(data1), struct.calcsize(gpsfmt), struct.calcsize(tracefmt))
-        trace = var.dbuf[0:20000]
-        gps = var.dbuf[20000:20048]
-        #print(len(trace), len(gps))
-        #if(len(data) == struct.calcsize(tracefmt)):
+        gps = var.dbuf[0:gpslen]
+        trace = var.dbuf[gpslen:plen]
+
+        data = struct.unpack(gpsfmt, gps)
+            
+        var.gpsLat.set(round(data[4],3))
+        var.gpsLon.set(round(data[5],3))
+        var.gpsElev.set(round(data[6],3))
+        var.rxtrace.set(data[3])
+        var.gpsSat.set(data[8])
+
         data = struct.unpack(tracefmt, trace)
         var.rxLine.set_ydata(data)
         var.rxCanvas.draw()
         var.rxCanvas.flush_events()
-        #elif(len(data) == struct.calcsize(gpsfmt)):
-        data = struct.unpack(gpsfmt, gps)
-        var.gpsLat.set(round(data[3],3))
-        var.gpsLon.set(round(data[4],3))
-        var.gpsElev.set(round(data[5],3))
-        var.rxtrace.set(data[2])
-        var.gpsSat.set(data[7])
-        var.dbuf = var.dbuf[20048::]
+
+        var.dbuf = var.dbuf[plen::]
     if(var.running):
         var.mainWindow.after(10, updateRX)
     elif(not var.running):
@@ -369,7 +402,7 @@ def networkInit():
     var.dataStream = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     var.dataStream.bind((ltip, 1999))
     var.dataStream.listen()
-    var.dataStream.settimeout(10)
+    var.dataStream.settimeout(1)
 
 def defaults():
     var.rxfs.set(100)
@@ -377,7 +410,7 @@ def defaults():
     var.trlenTxt.set(50)
     var.stackTxt.set(100)
     var.chirpBW.set(100)
-    var.chirpCF.set(5)
+    var.chirpCF.set(2.5)
     var.chirpAmp.set(0)
     var.chirpAmpV.set(.31618)
     var.chirpLen.set(5)

@@ -1,7 +1,6 @@
 import socket
 import subprocess
 
-ltip = "192.168.1.60"
 etip = "192.168.1.35"
 
 #litp = "localhost"
@@ -18,13 +17,16 @@ def main():
   proc = None
 
   while listen:
-    conn, addr = controller.accept()        
+    conn, addr = controller.accept()
     cmd = conn.recv(4096).decode()
     conn.close()
 
     if("SRT:::" in cmd and not running):
       running = True
-      proc = subprocess.Popen(cmd.split(":::")[1].split(' '))
+      cmd = cmd.split(":::")[1].split(' ')
+      cmd.append("--ip-display")
+      cmd.append(addr[0])
+      proc = subprocess.Popen(cmd)
       #print(cmd.split(":::")[1].split(' '))
       
     elif("STP:::" in cmd and running):

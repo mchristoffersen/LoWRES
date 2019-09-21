@@ -57,6 +57,9 @@ int UHD_SAFE_MAIN(int argc, char* argv[])
     // Pipe for communicating recvd data to saver
     int fd[2];
 
+    // String for sending display data back to
+    std::string ip_display;
+
     // setup the program options
     po::options_description desc("Allowed options");
     // clang-format off
@@ -78,6 +81,7 @@ int UHD_SAFE_MAIN(int argc, char* argv[])
         ("chirp-prf", po::value<double>(&chprf)->default_value(2000), "chirp pulse repetition frequency")
         ("trace-len", po::value<double>(&trlen)->default_value(0.00005), "trace length")
         ("stack", po::value<unsigned int>(&stack)->default_value(100), "number of traces to stack")
+	("ip-display", po::value<std::string>(&ip_display)->default_value(""), "IP address of display computer")
     ;
 
     // Options short-circuited from command line options
@@ -300,8 +304,8 @@ int UHD_SAFE_MAIN(int argc, char* argv[])
     saveHdr(dataFile, chbw, chcf, chlen, champ, chprf, trlen, rx_rate, stack, begin);
 
     // Open socket
-    int sockfd = initSocket();
-    std::cout << "Started socket\n";
+    int sockfd = initSocket(ip_display);
+    //std::cout << "Started socket\n";
 
     // Set up output pipe
     if(pipe(fd)) {

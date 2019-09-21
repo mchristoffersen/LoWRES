@@ -1,3 +1,4 @@
+#include <uhd/utils/thread.hpp>
 #include <boost/date_time.hpp>
 #include <uhd/usrp/multi_usrp.hpp>
 #include <boost/algorithm/string.hpp>
@@ -92,6 +93,7 @@ std::vector<std::complex<float>> generateGate(
 
 int traceHandler(uhd::usrp::multi_usrp::sptr usrp, 
                   FILE* dataFile, int sockfd, int* p, int spt) {
+    //uhd::set_thread_priority_safe(.9, true);
     gpsData fix;
     std::string nmea;
     uhd::time_spec_t time;
