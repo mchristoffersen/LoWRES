@@ -116,7 +116,7 @@ int traceHandler(uhd::usrp::multi_usrp::sptr usrp,
         if(rb != sizeof(unsigned long long int)) {
             std::cout << "Failure reading ntrace\n";
         }
-
+        //std::cout << ntrace << std::endl;
         fix.ntrace = ntrace;
 
         saveTrace(dataFile, trace, fix, time, spt);
@@ -168,7 +168,7 @@ int saveHdr(FILE* dataFile, double chirpBW, double chirpCF,
     memcpy(header+48, &traceLen, sizeof(double));
     
     memcpy(header+56, &rxFs, sizeof(double));
-    memcpy(header+64, &stack, sizeof(float));    
+    memcpy(header+64, &stack, sizeof(unsigned int));    
 
     // Initial time?
     // Notes?
@@ -184,7 +184,7 @@ int saveTrace(FILE* dataFile, float *data, gpsData fix, uhd::time_spec_t time, i
 
     fix.fullSec = time.get_full_secs();
     fix.fracsec = time.get_frac_secs();
-
+    //std::cout << fix.ntrace << std::endl;
     fwrite(&fix, sizeof(fix), 1, dataFile);
     fwrite(data, sizeof(float), traceLen, dataFile);
     

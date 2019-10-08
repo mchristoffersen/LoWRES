@@ -259,6 +259,7 @@ int UHD_SAFE_MAIN(int argc, char* argv[])
             << std::endl;
     }
     */
+
 /*
     while(! (usrp->get_mboard_sensor("gps_locked").to_bool())) {
         std::cout << usrp->get_mboard_sensor("gps_gpgga").value << std::endl;
@@ -266,6 +267,7 @@ int UHD_SAFE_MAIN(int argc, char* argv[])
 
     }
 */
+
     //usrp->set_time_source(ref);
 
     // Amplifier triggering via GPIO[3]
@@ -290,7 +292,7 @@ int UHD_SAFE_MAIN(int argc, char* argv[])
 
     // Set up sigint to end the program
     std::signal(SIGINT, &sig_int_handler);
-    std::cout << "Press Ctrl + C to stop streaming..." << std::endl;
+    std::cout << "Hit \"STOP\" on GUI to stop streaming..." << std::endl;
 
     //std::cout << "TRANSMIT";
     //boost::this_thread::sleep_for(boost::chrono::seconds(1));

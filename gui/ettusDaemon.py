@@ -3,9 +3,6 @@ import subprocess
 
 etip = "192.168.1.35"
 
-#litp = "localhost"
-#etip = "localhost"
-
 def main():
   controller = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
   controller.bind((etip, 1997))
@@ -19,9 +16,9 @@ def main():
   while listen:
     conn, addr = controller.accept()
     cmd = conn.recv(4096).decode()
-    conn.close()
 
     if("SRT:::" in cmd and not running):
+      conn.send("SRT".encode())
       running = True
       cmd = cmd.split(":::")[1].split(' ')
       cmd.append("--ip-display")
@@ -30,8 +27,15 @@ def main():
       #print(cmd.split(":::")[1].split(' '))
       
     elif("STP:::" in cmd and running):
+      conn.send("STP".encode())
       running = False
       proc.terminate()
       #print("STOP!")
+
+    else:
+      conn.send("INV".encode())
+      print("Invalid command")
+
+    conn.close()
 
 main()
