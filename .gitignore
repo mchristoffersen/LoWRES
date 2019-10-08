@@ -39,3 +39,6 @@ radar
 
 # Pycache
 __pycache__/
+
+# HDF5 test files
+*.h5

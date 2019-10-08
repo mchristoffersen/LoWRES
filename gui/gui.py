@@ -1,3 +1,5 @@
+#!/usr/bin/python3
+
 import tkinter as tk
 import tkinter.ttk as ttk
 import tkinter.font as font
@@ -285,7 +287,11 @@ def sendStartCmd():
     eD = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     eD.connect((eDip, eDport))
     eD.send(("SRT:::"+cmd+":::").encode())
+    reply = eD.recv(1024).decode()
     eD.close()
+    if(reply == "INV"):
+      print("Invalid command")
+      return
     nsamp = int(float(var.trlenTxt.get())*1e-6*(var.txfs.get()*1e6))
     t = np.linspace(0, float(var.trlenTxt.get()), nsamp)
     var.rxPlot.cla()
@@ -304,7 +310,11 @@ def sendStopCmd():
     eD = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     eD.connect((eDip, eDport))
     eD.send(("STP::::::").encode())
+    reply = eD.recv(1024).decode()
     eD.close()
+    if(reply == "INV"):
+      print("Invalid command")
+      return
     var.rxPlot.set_facecolor('grey')
     var.rxCanvas.draw()
     var.rxCanvas.flush_events()
@@ -358,7 +368,7 @@ def updateRX():
             spos = var.dbuf.rfind(b'\xb8\xd5\xdb_\xb9U\xe7C')
             var.dbuf = var.dbuf[spos::]
             var.mainWindow.after(10, updateRX)
-            print("Data shortening")
+            #print("Data shortening")
             return
 
         if(var.dbuf.find(b'\xb8\xd5\xdb_\xb9U\xe7C')):
@@ -367,7 +377,7 @@ def updateRX():
                 var.dbuf = var.dbuf[spos::]
             else:
                 var.dbuf = b''
-            print("Data misalignment")
+            #print("Data misalignment")
             var.mainWindow.after(10, updateRX)
             return
 

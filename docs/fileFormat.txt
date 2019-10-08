@@ -1,0 +1,111 @@
+-- Version 1.0 --
+
+-Header-
+
+byte = 0
+  Magic bytes - 0xD0D0BEEF
+byte = 4
+  [float32] Version number
+byte = 8
+  [float64] Chirp center frequency
+byte = 16
+  [float64] Chirp bandwidth
+byte = 24
+  [float64] Chirp length
+byte = 32
+  [float64] Chirp amplitude
+byte = 40
+  [float64] Pulse repetition frequency
+byte = 48
+  [float64] Trace length
+byte = 56
+  [float64] RX sampling frequency
+byte = 64
+  [uint32] Stacking
+byte = 68
+
+-Records-
+
+byte = 0
+  Magic bytes - OxBAADCAFEDEADBEEF
+byte = 8
+  [int64] Whole seconds time
+byte = 16
+  [float64] Fractional seconds time
+byte = 24
+  [int64] Trace number
+byte = 32
+  [float32] Trace latitude
+byte = 36
+  [float32] Trace longitude
+byte = 40
+  [float32] Trace altitude
+byte = 44
+  [float32] Dilution of precision
+byte = 48
+  [float32] Number of satelites
+byte = 52
+   zeros
+byte = 56
+   [float32] Trace
+byte = 4*((RX sampling frequency)*(Trace length)) + 56
+
+
+
+-- Version 1.1 --
+
+-Header-
+
+byte = 0
+  Magic bytes - 0xD0D0BEEF
+byte = 4
+  [float32] Version number
+byte = 8
+  [float64] Chirp center frequency
+byte = 16
+  [float64] Chirp bandwidth
+byte = 24
+  [float64] Chirp length
+byte = 32
+  [float64] Chirp amplitude
+byte = 40
+  [float64] Pulse repetition frequency
+byte = 48
+  [float64] Trace length
+byte = 56
+  [float64] RX sampling frequency
+byte = 64
+  [uint32] Stacking
+byte = 68
+  [uint32] Number of traces
+byte = 72
+  [uint32] Samples per trace
+byte = 76
+  [char] Comment (max 200 chars)
+byte = 276
+
+-Records-
+
+byte = 0
+  Magic bytes - OxBAADCAFEDEADBEEF
+byte = 8
+  [int64] Whole seconds time
+byte = 16
+  [float64] Fractional seconds time
+byte = 24
+  [int64] Trace number
+byte = 32
+  [float32] Trace latitude
+byte = 36
+  [float32] Trace longitude
+byte = 40
+  [float32] Trace altitude
+byte = 44
+  [float32] Dilution of precision
+byte = 48
+  [float32] Number of satelites
+byte = 52
+   zeros
+byte = 56
+   [float32] Trace
+byte = 4*((RX sampling frequency)*(Trace length)) + 56
