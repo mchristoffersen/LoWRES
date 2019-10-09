@@ -50,7 +50,7 @@ def parseRaw(fname):
 
       dd["rx0"][:,i] = struct.unpack('f'*dd["spt"], data[ofst+56:ofst+56+dd["spt"]*4])
   
-  dd["rx0"] = np.array(dd["rx0"]).astype("float32")
+  dd["rx0"] = np.array(dd["rx0"]).astype(np.float32)
 
   return dd
 
@@ -66,28 +66,57 @@ def generateChirp(cf, bw, length, fs):
 
   return c
 
-def main():
-  dd = parseRaw(sys.argv[1])
-  outf = sys.argv[1].replace(".dat",".h5")
-  print(outf)
-  f = h5py.File(outf, "w")
-  rx0 = f.create_dataset("rx0", data = dd["rx0"]) #, compression="gzip")
-  rx0.attrs["fsHz"] = dd["fs"]
-  rx0.attrs["traceLengthS"] = dd["traceLen"]
-  rx0.attrs["stacking"] = dd["stack"]
-  rx0.attrs["samplesPerTrace"] = dd["spt"]
-  rx0.attrs["numTraces"] = dd["ntrace"]
+def h5build(dd, fname):
+  f = h5py.File(fname, "w")
+  # rx0 dataset
+  rx0 = f.create_dataset("rx0", data = dd["rx0"], dtype=np.float32) #, compression="gzip")
+  rx0.attrs.create("fsHz", dd["fs"], dtype=np.uint64)
+  rx0.attrs.create("traceLengthS", dd["traceLen"], dtype=np.float64)
+  rx0.attrs.create("stacking", dd["stack"], dtype=np.uint64)
+  rx0.attrs.create("samplesPerTrace", dd["spt"], dtype=np.uint64)
+  rx0.attrs.create("numTraces", dd["ntrace"], dtype=np.uint64)
 
   # ref chirp
   chirp = generateChirp(dd["chirpCF"], dd["chirpBW"], dd["chirpLen"], dd["fs"])
   ch = np.zeros((dd["rx0"].shape[0], 1)).astype("float32")
   ch[0:len(chirp)] = chirp
-  tx0 = f.create_dataset("tx0", data = ch)
-  tx0.attrs.create("chirpCenterFrequencyHz", dd["chirpCF"])
-  tx0.attrs["chirpBandwidthPct"] = dd["chirpBW"]
-  tx0.attrs["chirpLengthS"] = dd["chirpLen"]
-  tx0.attrs["chirpPulseRepetitionFrequencyHz"] = dd["chirpPRF"] 
+
+  # tx0 dataset
+  tx0 = f.create_dataset("tx0", data = ch, dtype=np.float32)
+  tx0.attrs.create("chirpCenterFrequencyHz", dd["chirpCF"], dtype=np.float64)
+  tx0.attrs.create("chirpBandwidthPct", dd["chirpBW"], dtype=np.float64)
+  tx0.attrs.create("chirpLengthS", dd["chirpLen"], dtype=np.float64)
+  tx0.attrs.create("chirpPulseRepetitionFrequencyHz", dd["chirpPRF"], dtype=np.float64)
+
+  # loc dataset
+  loc_t = np.dtype([('lat', np.float32),
+                    ('lon', np.float32),
+                    ('altM', np.float32),
+                    ('DOP', np.float32),
+                    ('nsat', np.uint8)])
+  locList = [None]*dd["ntrace"]
+  for i in range(dd["ntrace"]):
+    locList[i] = (dd["lat"][i], dd["lon"][i], dd["alt"][i], dd["dop"][i], dd["nsat"][i])
+  locList = np.array(locList, dtype=loc_t)
+  loc0 = f.create_dataset("loc0", data=locList, dtype=loc_t)
+  loc0.attrs.create("CRS", np.string_("WGS84"))
+
+  # time dataset 
+  time_t = np.dtype([('fullS', np.uint64),
+                     ('fracS', np.float64)])
+  timeList = [None]*dd["ntrace"]
+  for i in range(dd["ntrace"]):
+    timeList[i] = (dd["tfull"][i], dd["tfrac"][i])
+  timeList = np.array(timeList, dtype=time_t)
+  time0 = f.create_dataset("time0", data=timeList, dtype=time_t)
+  time0.attrs.create("Clock", np.string_("GPS"))
 
   f.close()
+
+def main():
+  dd = parseRaw(sys.argv[1])
+  outf = sys.argv[1].replace(".dat",".h5")
+  print(outf)
+  h5build(dd, outf)
 
 main()
