@@ -2,6 +2,9 @@ import h5py
 import numpy as np
 import sys
 import matplotlib.pyplot as plt
+from mpl_toolkits.basemap import Basemap
+import geotiler
+from pyproj import Proj, transform
 
 def pulseCompress(rx0, refchirp):
   pc = np.zeros(rx0.shape).astype("float32")
@@ -19,9 +22,6 @@ def removeSlidingMeanFFT(rx0):
   a = np.zeros(rx0.shape[1])
   a[0:sumint//2] = 1
   a[rx0.shape[1]-sumint//2:rx0.shape[1]] = 1
-  #for i in range(rx0.shape[1]):
-  #  if(a[i] == 1):
-  #    print(i,a[i])
   A = np.fft.fft(a)
 
   # Main circular convolution
@@ -73,6 +73,35 @@ def removeSlidingMean(rx0):
 
   return rx0NM
 
+
+def saveMap(loc, name):
+  minlat = np.min(loc["lat"])-.05
+  minlon = np.min(loc["lon"])-.05
+  maxlat = np.max(loc["lat"])+.05
+  maxlon = np.max(loc["lon"])+.05
+
+  gtm = geotiler.Map(extent=(minlon,minlat,maxlon,maxlat), zoom=12, provider="stamen-terrain")
+  image = geotiler.render_map(gtm)
+  w,h = image.size
+
+  fig = plt.figure(frameon=False)
+  fig.set_size_inches(w/500, h/500)
+  ax = plt.Axes(fig, [0., 0., 1., 1.])
+  ax.set_axis_off()
+  fig.add_axes(ax)
+
+  bm = Basemap(llcrnrlon=minlon,
+               llcrnrlat=minlat,
+               urcrnrlon=maxlon,
+               urcrnrlat=maxlat,
+               lat_0=(minlat+maxlat)/2,
+               lon_0=(minlon+maxlon)/2,
+               projection="tmerc", resolution=None)
+  bm.imshow(image, aspect='equal', origin='upper')
+  bm.plot(loc["lon"], loc["lat"], linewidth=1,color='r', latlon=True)
+  bm.plot(loc["lon"][0], loc["lat"][0], 'go', latlon=True)
+  fig.savefig(name, dpi=500)
+
 def saveImage(pc, name):
   fig = plt.figure(frameon=False)  
   fig.set_size_inches(pc.shape[1]/1000, pc.shape[0]/1000)
@@ -80,7 +109,7 @@ def saveImage(pc, name):
   ax.set_axis_off()
   fig.add_axes(ax)
   im = np.log(pc**2)
-  ax.imshow(im, aspect='equal', cmap='Greys_r', vmin=.5*np.min(im))
+  ax.imshow(im, aspect='equal', cmap='Greys_r', vmin=.3*np.min(im), vmax=.9*np.max(im))
   fig.savefig(name, dpi=500)
 
 def removeMean(rx0):
@@ -99,16 +128,15 @@ def main():
   f = h5py.File(sys.argv[1], 'a')
   rx0 = f["rx0"][:]
   refchirp = f["tx0"][:,0]
+  loc = f["loc0"][:]
+
 
   # Process data
-  #mean = removeSlidingMean(rx0)
   rx0NM = removeSlidingMeanFFT(rx0)
-  #for i in range(rx0.shape[1]):
-  #  print(i, np.sum(meanFFT[:,i] - mean[:,i]))
   rx0NM = np.roll(rx0NM, -105, axis=0)
   pc = pulseCompress(rx0NM, refchirp)
   saveImage(pc, sys.argv[1].replace(".h5", ".png"))
-  #pc = removeMean(pc)
+  saveMap(loc, sys.argv[1].replace(".h5", "_map.png"))
 
   # Save processed dataset
   proc0 = f.require_dataset("proc0", shape=rx0.shape, dtype=np.float32)
