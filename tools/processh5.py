@@ -80,7 +80,7 @@ def saveMap(loc, name):
   maxlat = np.max(loc["lat"])+.05
   maxlon = np.max(loc["lon"])+.05
 
-  gtm = geotiler.Map(extent=(minlon,minlat,maxlon,maxlat), zoom=12, provider="stamen-terrain")
+  gtm = geotiler.Map(extent=(minlon,minlat,maxlon,maxlat), zoom=11, provider="stamen-terrain")
   image = geotiler.render_map(gtm)
   w,h = image.size
 
@@ -132,17 +132,17 @@ def main():
 
 
   # Process data
-  rx0NM = removeSlidingMeanFFT(rx0)
-  rx0NM = np.roll(rx0NM, -105, axis=0)
-  pc = pulseCompress(rx0NM, refchirp)
-  saveImage(pc, sys.argv[1].replace(".h5", ".png"))
+  #rx0NM = removeSlidingMeanFFT(rx0)
+  #rx0NM = np.roll(rx0NM, -105, axis=0)
+  #pc = pulseCompress(rx0NM, refchirp)
+  #saveImage(pc, sys.argv[1].replace(".h5", ".png"))
   saveMap(loc, sys.argv[1].replace(".h5", "_map.png"))
 
   # Save processed dataset
-  proc0 = f.require_dataset("proc0", shape=rx0.shape, dtype=np.float32)
-  proc0[:] = pc
-  proc0.attrs.create("RefChirp", np.string_("tx0"))
-  proc0.attrs.create("Notes", np.string_("Mean removed in sliding 500 trace window : -105 sample circ shift to correct for xmit delay"))
+  #proc0 = f.require_dataset("proc0", shape=rx0.shape, dtype=np.float32)
+  #proc0[:] = pc
+  #proc0.attrs.create("RefChirp", np.string_("tx0"))
+  #proc0.attrs.create("Notes", np.string_("Mean removed in sliding 500 trace window : -105 sample circ shift to correct for xmit delay"))
 
   f.close()
 
