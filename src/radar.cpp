@@ -1,3 +1,5 @@
+// LoWRES Control Code
+// An example from Ettus, heavily modfied by Michael Christoffersen
 //
 // Copyright 2010-2012,2014-2015 Ettus Research LLC
 // Copyright 2018 Ettus Research, a National Instruments Company
@@ -281,8 +283,7 @@ int UHD_SAFE_MAIN(int argc, char* argv[])
         int64_t(usrp->get_mboard_sensor("gps_time").to_int()));
     usrp->set_time_next_pps(gps_time + 1.0);
 
-    begin = uhd::time_spec_t(gps_time.get_full_secs() + 6.0);
-
+    begin = uhd::time_spec_t(gps_time.get_full_secs() + 5.0);
 
     boost::this_thread::sleep_for(boost::chrono::seconds(2)); // Ensure PPS sync
 

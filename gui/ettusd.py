@@ -5,6 +5,7 @@ etip = "192.168.1.35"
 
 def main():
   controller = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+  controller.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
   controller.bind((etip, 1997))
   controller.listen()
   
