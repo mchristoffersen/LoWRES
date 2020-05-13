@@ -14,14 +14,14 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolb
 from matplotlib.figure import Figure
 import var
 
-etip = "192.168.1.35"
+etip = "192.168.2.35"
 ltip = ""
 
 def buildGui():
     # Main window
     mainWindow = tk.Tk()
-    mainWindow.geometry("+350+200")
-    img = tk.PhotoImage(file="/home/mchristo/proj/LoWRES/gui/vervet.png")
+    mainWindow.geometry("+130+60")
+    img = tk.PhotoImage(file="/home/langur/LoWRES/gui/vervet.png")
     mainWindow.tk.call('wm', 'iconphoto', mainWindow._w, img)
     mainWindow.title('LoWRES')
     mainWindow.config(bg='black')
@@ -410,6 +410,7 @@ def updateRX():
 
 def networkInit():
     var.dataStream = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    var.dataStream.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     var.dataStream.bind((ltip, 1999))
     var.dataStream.listen()
     var.dataStream.settimeout(1)
