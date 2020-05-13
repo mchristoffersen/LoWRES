@@ -1,7 +1,7 @@
 import socket
 import subprocess
 
-etip = "192.168.1.35"
+etip = "192.168.2.35"
 
 def main():
   controller = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
