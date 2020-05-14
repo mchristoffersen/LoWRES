@@ -14,7 +14,7 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolb
 from matplotlib.figure import Figure
 import var
 
-etip = "192.168.2.35"
+etip = "192.168.1.35"
 ltip = ""
 
 def buildGui():
@@ -280,6 +280,9 @@ def genRadarCmd():
 
 def sendStartCmd():
     var.running = True
+    #print("SRT cmd sent")
+    #print("running=",var.running)
+    #print("connected=",var.connected)
     var.rxPlot.set_facecolor('black')
     cmd = genRadarCmd()
     eDip = etip
@@ -303,6 +306,9 @@ def sendStartCmd():
 
 def sendStopCmd():
     var.running = False
+    var.connected = False
+    #print("Stop CMD set")
+    #print("running=",var.running)
     var.dbuf = b''
     cmd = genRadarCmd()
     eDip = etip
@@ -351,16 +357,25 @@ def updateRX():
     datalen = 20000
     plen = gpslen+datalen
 
+    if(not var.running):
+        var.connected=False
+        return
+
     if(not var.connected):
         slct = select.select([var.dataStream], [], [], 0.1)
         if(len(slct[0]) > 0):
             var.conn, addr = var.dataStream.accept()
             var.connected = True
+
     if(var.connected):
         while(len(var.dbuf) < plen):
             data = var.conn.recv(4096)
             if(len(data) == 0):
               print("RX timeout")
+              #print("connected", var.connected)
+              #print("running", var.running)
+              print("RESTART ettusd AND RESTART lowres-gui")
+              print("Sorry. Still haven't figured out how to gracefully recover from this")
               return
             var.dbuf = var.dbuf + data
   
@@ -405,8 +420,6 @@ def updateRX():
         var.dbuf = var.dbuf[plen::]
     if(var.running):
         var.mainWindow.after(10, updateRX)
-    elif(not var.running):
-        var.connected = False
 
 def networkInit():
     var.dataStream = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
